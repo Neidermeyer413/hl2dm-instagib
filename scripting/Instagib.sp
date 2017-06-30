@@ -40,7 +40,7 @@ public void OnPluginStart()
 	iGib = CreateConVar("instagib", "0", "Instagib mode on/off");
 	iTrace = CreateConVar("instagib_tracers", "1", "Instagib tracers on/off");
 	MagJump = CreateConVar("instagib_magjump", "1", "Instagib magnum jumps on/off");
-	MagJumpMult = CreateConVar("instagib_magjump_mult", "2.99", "Instagib magnum jump force multiplier");
+	MagJumpMult = CreateConVar("instagib_magjump_mult", "3.0", "Instagib magnum jump force multiplier");
 	RegAdminCmd("instagib", instagibCmd, ADMFLAG_CHANGEMAP, "Instagib mode on/off");
 	RegConsoleCmd("tracers", tracersColor)
 	HookConVarChange(iGib, instagibToggle);
