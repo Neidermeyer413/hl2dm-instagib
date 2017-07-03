@@ -7,9 +7,9 @@ public Plugin myinfo =
 {
 	name = "Instagib test",
 	author = "Neidermeyer",
-	description = "Slowly trying to build a legit instagib plugin for my favourite game",
-	version = "0.6",
-	url = "http://www.sfc.my1.ru/"
+	description = "Quake3-style instagib mode with magjumps and coloured trails",
+	version = "1.0",
+	//url = ""
 };
 
 new Handle:iGib;
@@ -22,8 +22,8 @@ new Handle:clTraceB;
 
 new g_modelLaser;
 
-new activeoffset = 1896
-new clipoffset = 1204
+new activeoffset;
+new clipoffset;
 
 public OnMapStart()
 {
@@ -35,14 +35,16 @@ public OnMapStart()
 
 public void OnPluginStart()
 {
-	HookEvent("player_spawn", Event_PlayerSpawn);
-	HookEvent("round_start", Event_GameStart);
 	iGib = CreateConVar("instagib", "0", "Instagib mode on/off");
 	iTrace = CreateConVar("instagib_tracers", "1", "Instagib tracers on/off");
 	MagJump = CreateConVar("instagib_magjump", "1", "Instagib magnum jumps on/off");
-	MagJumpMult = CreateConVar("instagib_magjump_mult", "3.0", "Instagib magnum jump force multiplier");
+	MagJumpMult = CreateConVar("instagib_magjump_mult", "2.9999999", "Instagib magnum jump force multiplier");
 	RegAdminCmd("instagib", instagibCmd, ADMFLAG_CHANGEMAP, "Instagib mode on/off");
-	RegConsoleCmd("tracers", tracersColor)
+	RegConsoleCmd("tracers", tracersColor);
+	RegConsoleCmd("ent_remove_all", dontRunOnClient);
+	
+	HookEvent("player_spawn", Event_PlayerSpawn);
+	HookEvent("round_start", Event_GameStart);
 	HookConVarChange(iGib, instagibToggle);
 	
 	//Cookies
@@ -51,56 +53,46 @@ public void OnPluginStart()
 	clTraceB = RegClientCookie("Instagib tracer B", "Blue component for tracer", CookieAccess_Public);
 	SetCookieMenuItem(customisationMenu, 0, "Instagib tracers customisation"); 
 	
-  	new off = FindSendPropOffs("CAI_BaseNPC", "m_hActiveWeapon");
-	if(off != -1)
-	{
-		activeoffset = off;
-	}
-	off = -1;	
-	off = FindSendPropOffs("CBaseCombatWeapon", "m_iClip1");
-	if(off != -1)
-	{
-		clipoffset = off;
-	}	
-	RegConsoleCmd("ent_remove_all", dontRunOnClient);
+	activeoffset = FindSendPropInfo("CAI_BaseNPC", "m_hActiveWeapon");
+	clipoffset = FindSendPropInfo("CBaseCombatWeapon", "m_iClip1");
 }
 
 public Action tracersColor(int player, int args)
 {
 	if (GetConVarInt(iGib) == 1){
-	char arg[128];
-	if (args != 3)
-{
-	ReplyToCommand(player, "Example: !tracers 0 255 255");	
-}	
-else
-{
-		new intarg;
-		decl String:color[3][4];
-		for (int i=1; i<=args; i++)
-	{
-		GetCmdArg(i, arg, sizeof(arg));
-		intarg = StringToInt(arg);
-		if (intarg >= 0 || intarg <= 255){
-			strcopy(color[i-1], 4, arg);		
-		}
+		char arg[128];
+		if (args != 3)
+		{
+			ReplyToCommand(player, "Example: !tracers 0 255 255");	
+		}	
 		else
 		{
-			color[i] = "0"
-		}
-	}
-	if (StringToInt(color[0]) + StringToInt(color[1]) + StringToInt(color[2]) < 255){
-					PrintToChat(player, "R+G+B has to be > 255");
-				} 
+			new intarg;
+			decl String:color[3][4];
+			for (int i=1; i<=args; i++)
+			{
+				GetCmdArg(i, arg, sizeof(arg));
+				intarg = StringToInt(arg);
+				if (intarg >= 0 || intarg <= 255){
+					strcopy(color[i-1], 4, arg);		
+				}
 				else
 				{
-		SetClientCookie(player, clTraceR, color[0]);
-		SetClientCookie(player, clTraceG, color[1]);
-		SetClientCookie(player, clTraceB, color[2]);
+					color[i] = "0"
 				}
-}
+			}
+			if (StringToInt(color[0]) + StringToInt(color[1]) + StringToInt(color[2]) < 255){
+				PrintToChat(player, "R+G+B has to be > 255");
+			} 
+			else
+			{
+				SetClientCookie(player, clTraceR, color[0]);
+				SetClientCookie(player, clTraceG, color[1]);
+				SetClientCookie(player, clTraceB, color[2]);
+			}
+		}
 	}
-return Plugin_Handled;
+	return Plugin_Handled;
 	
 }
 
@@ -126,7 +118,7 @@ public customisationMenu(client, CookieMenuAction:action, any:info, String:sBuff
 
 public colorMenuHandler(Handle:colormenu, MenuAction:action, player, item){
 	if (action == MenuAction_Select) {
-		new act, clr;  //These variables define color component and action on it
+		new act, clr;  //These variables define colour component and action on it
 		decl String:preference[3];
 		GetMenuItem(colormenu, item, preference, sizeof(preference));
 		act = RoundToFloor(StringToFloat(preference) / 3.0);
@@ -151,22 +143,22 @@ public colorMenuHandler(Handle:colormenu, MenuAction:action, player, item){
 			}
 			case 3:
 			{	
-			IntToString(StringToInt(color[clr]) > 230 ? 255 : StringToInt(color[clr]) + 25, color[clr], sizeof(color[]));	
+				IntToString(StringToInt(color[clr]) > 230 ? 255 : StringToInt(color[clr]) + 25, color[clr], sizeof(color[]));	
 			}	
 			case 4:
 			{	
-			IntToString(StringToInt(color[clr]) < 25 ? 0 : StringToInt(color[clr]) - 25, color[clr], sizeof(color[]));	
+				IntToString(StringToInt(color[clr]) < 25 ? 0 : StringToInt(color[clr]) - 25, color[clr], sizeof(color[]));	
 			}				
 		}
 		if (StringToInt(color[0]) + StringToInt(color[1]) + StringToInt(color[2]) < 255){
-					PrintToChat(player, "R+G+B has to be > 255");
-				} 
-				else
-				{
-		SetClientCookie(player, clTraceR, color[0]);
-		SetClientCookie(player, clTraceG, color[1]);
-		SetClientCookie(player, clTraceB, color[2]);
-				}
+			PrintToChat(player, "R+G+B has to be > 255");
+		} 
+		else
+		{
+			SetClientCookie(player, clTraceR, color[0]);
+			SetClientCookie(player, clTraceG, color[1]);
+			SetClientCookie(player, clTraceB, color[2]);
+		}
 	}
 	else if (action == MenuAction_End) {
 		CloseHandle(colormenu);
@@ -193,12 +185,11 @@ public Action instagibCmd(int client, int args)
 	return Plugin_Handled;
 }
 
-public OnClientPutInServer(client)
-{
+public OnClientPutInServer(client){
     SDKHook(client, SDKHook_OnTakeDamage, OnTakeDamage);
-	SDKHook(client, SDKHook_FireBulletsPost, FireBulletsPost);
-	if (GetConVarInt(iGib) == 1){
-	CreateTimer(60.0, tellAboutTracers, GetClientSerial(client));	
+    SDKHook(client, SDKHook_FireBulletsPost, FireBulletsPost);
+    if (GetConVarInt(iGib) == 1){
+		CreateTimer(60.0, tellAboutTracers, GetClientSerial(client));	
 	}
 }
 
@@ -208,11 +199,11 @@ public Action tellAboutTracers(Handle timer, any serial){
 	{
 		return Plugin_Stop;
 	}
-	PrintToChat(GetClientFromSerial(serial), "Use !settings or !tracers to set your 357 tracer colour");
+	PrintToChat(GetClientFromSerial(serial), "Use !settings or !tracers to set your 357 tracers colour");
 	return Plugin_Stop; 
 }
 
-public Action:OnTakeDamage(victim, &attacker, &inflictor, &Float:damage, &damagetype)
+public Action OnTakeDamage(victim, &attacker, &inflictor, &Float:damage, &damagetype)
 {   
 	if (GetConVarInt(iGib) == 1){
 		if(damage > 74)
@@ -226,7 +217,7 @@ public Action:OnTakeDamage(victim, &attacker, &inflictor, &Float:damage, &damage
 			return Plugin_Changed;	
 		}
 	}
-    return Plugin_Continue; 
+	return Plugin_Continue;
 }
 
 public void FireBulletsPost(player, shots,  String:weaponname[])
@@ -241,7 +232,7 @@ public void FireBulletsPost(player, shots,  String:weaponname[])
 		decl Float:eyePos[3];
 		decl Float:eyeAngl[3];
 		decl Float:endPos[3];
-		decl Float:eyeDir[3];
+		decl Float:splashNorm[3];
 		GetClientEyePosition(player, eyePos); 
 		GetClientEyeAngles(player, eyeAngl);
 		
@@ -251,7 +242,7 @@ public void FireBulletsPost(player, shots,  String:weaponname[])
 		{
 			TR_GetEndPosition(endPos, INVALID_HANDLE);
 		}
-		TR_GetPlaneNormal(INVALID_HANDLE, eyeDir);
+		TR_GetPlaneNormal(INVALID_HANDLE, splashNorm);
 		if (GetConVarInt(iTrace) == 1){	
 			//Client settings for tracers
 			if (AreClientCookiesCached(player)){	
@@ -281,7 +272,7 @@ public void FireBulletsPost(player, shots,  String:weaponname[])
 			TE_SetupBeamPoints(eyePos, endPos, g_modelLaser, 0, 0, 5, 1.0, 15.0, 15.0, 1, 0.0, color, 64); 
 			TE_SendToAll(0.0); 	
 		}	
-		TE_SetupEnergySplash(endPos, eyeDir, true);
+		TE_SetupEnergySplash(endPos, splashNorm, true);
 		TE_SendToAll(0.0); 	
 		
 		//MagJumps
