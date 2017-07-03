@@ -9,7 +9,7 @@ public Plugin myinfo =
 	author = "Neidermeyer",
 	description = "Quake3-style instagib mode with magjumps and coloured trails",
 	version = "1.0",
-	//url = ""
+	url = "https://forums.alliedmods.net/showthread.php?t=299113"
 };
 
 new Handle:iGib;
