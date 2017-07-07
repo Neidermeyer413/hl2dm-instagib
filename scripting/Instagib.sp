@@ -12,6 +12,14 @@ public Plugin myinfo =
 	url = "https://forums.alliedmods.net/showthread.php?t=299113"
 };
 
+enum {
+	TRACERS_OFF = 0,
+	TRACERS_CUSTOM,
+	TRACERS_SCOREBOARD,
+};
+
+new tracersScoreboardColors[MAXPLAYERS];
+
 new Handle:iGib;
 new Handle:iTrace;
 new Handle:MagJump;
@@ -36,7 +44,7 @@ public OnMapStart()
 public void OnPluginStart()
 {
 	iGib = CreateConVar("instagib", "0", "Instagib mode on/off");
-	iTrace = CreateConVar("instagib_tracers", "1", "Instagib tracers on/off");
+	iTrace = CreateConVar("instagib_tracers", "1", "Instagib tracers off / player defined / scoreboard based");
 	MagJump = CreateConVar("instagib_magjump", "1", "Instagib magnum jumps on/off");
 	MagJumpMult = CreateConVar("instagib_magjump_mult", "2.9999999", "Instagib magnum jump force multiplier");
 	RegAdminCmd("instagib", instagibCmd, ADMFLAG_CHANGEMAP, "Instagib mode on/off");
@@ -188,7 +196,7 @@ public Action instagibCmd(int client, int args)
 public OnClientPutInServer(client){
     SDKHook(client, SDKHook_OnTakeDamage, OnTakeDamage);
     SDKHook(client, SDKHook_FireBulletsPost, FireBulletsPost);
-    if (GetConVarInt(iGib) == 1){
+    if (GetConVarInt(iGib) == 1 && GetConVarInt(iTrace) == TRACERS_CUSTOM){
 		CreateTimer(60.0, tellAboutTracers, GetClientSerial(client));	
 	}
 }
@@ -243,7 +251,16 @@ public void FireBulletsPost(player, shots,  String:weaponname[])
 			TR_GetEndPosition(endPos, INVALID_HANDLE);
 		}
 		TR_GetPlaneNormal(INVALID_HANDLE, splashNorm);
-		if (GetConVarInt(iTrace) == 1){	
+		if (GetConVarInt(iTrace) != TRACERS_OFF) {
+				decl String:clcolor[3][4];				
+				GetClientCookie(player, clTraceR, clcolor[0], 4);
+				GetClientCookie(player, clTraceG, clcolor[1], 4);
+				GetClientCookie(player, clTraceB, clcolor[2], 4);
+				color[0] = StringToInt(clcolor[0]);
+				color[1] = StringToInt(clcolor[1]);
+				color[2] = StringToInt(clcolor[2]);	
+		}
+		if (GetConVarInt(iTrace) == TRACERS_CUSTOM){	
 			//Client settings for tracers
 			if (AreClientCookiesCached(player)){	
 				decl String:clcolor[3][4];				
@@ -269,9 +286,16 @@ public void FireBulletsPost(player, shots,  String:weaponname[])
 					PrintToChat(player, "R+G+B has to be > 255");
 				} 	
 			}	
+		} else if (GetConVarInt(iTrace) == TRACERS_SCOREBOARD) {
+			UpdateTracersColorsByScores();
+			color[0] = (tracersScoreboardColors[player] >> 16) & 255;
+			color[1] = (tracersScoreboardColors[player] >> 8) & 255;
+			color[2] =  tracersScoreboardColors[player] & 255;
+		}
+		if (GetConVarInt(iTrace) != TRACERS_OFF) {
 			TE_SetupBeamPoints(eyePos, endPos, g_modelLaser, 0, 0, 5, 1.0, 15.0, 15.0, 1, 0.0, color, 64); 
-			TE_SendToAll(0.0); 	
-		}	
+			TE_SendToAll(0.0);
+		}
 		TE_SetupEnergySplash(endPos, splashNorm, true);
 		TE_SendToAll(0.0); 	
 		
@@ -383,4 +407,126 @@ public Action startInstagib(Handle timer)
 	ServerCommand("ent_remove_all item_battery");
 	
 	return Plugin_Stop; 
+}
+
+// that's right, update every player's tracers colors, not just one
+void UpdateTracersColorsByScores()
+{
+	new frags_min = 0;
+	new frags_max = 0;
+
+	// get min, max
+	for (new client = 1; client <= MaxClients; client++)
+	{
+		if (IsClientInGame(client) && !IsFakeClient(client) && IsClientAuthorized(client))
+		{
+			new player_score = GetClientFrags(client);
+
+			if (player_score < frags_min)
+			{
+				frags_min = player_score;
+			}
+			else if (player_score > frags_max)
+			{
+				frags_max = player_score;
+			}
+		}
+	}
+
+	new frags_range = frags_max - frags_min;
+
+	if (!frags_range)
+	{
+		// to set default colors
+		frags_range = 1;
+	}
+
+	// set colors
+	for (new client = 1; client <= MaxClients; client++)
+	{
+		if (IsClientInGame(client) && !IsFakeClient(client) && IsClientAuthorized(client))
+		{
+			new frags = GetClientFrags(client);
+
+			// not 360 so the worst player won't have the same color as the
+			// best one (see how HSV works)
+			// best - red, worst - blue
+			new Float:awesomness = 240.0 - 240.0 * (frags - frags_min) / frags_range;
+			new color = hsv2rgb(awesomness);
+
+			tracersScoreboardColors[client] = color;
+		}
+	}
+}
+
+
+// returns color based on hue with value = 1 and saturation = 1
+int hsv2rgb(Float:hue)
+{
+	new Float:hh;
+	new Float:q;
+	new Float:t;
+	new Float:ff;
+	new Float:r;
+	new Float:g;
+	new Float:b;
+
+	new i;
+
+	hh = hue;
+	if(hh >= 360.0)
+	{
+		hh = 0.0;
+	}
+	hh /= 60.0;
+
+	i = RoundToFloor(hh);
+
+	ff = hh - i;
+
+	q = 1.0 - ff;
+	t = ff;
+
+	switch(i) {
+	case 0:
+		{
+			r = 1.0;
+			g = t;
+			b = 0.0;
+		}
+	case 1:
+		{
+			r = q;
+			g = 1.0;
+			b = 0.0;
+		}
+	case 2:
+		{
+			r = 0.0;
+			g = 1.0;
+			b = t;
+		}
+	case 3:
+		{
+			r = 0.0;
+			g = q;
+			b = 1.0;
+		}
+	case 4:
+		{
+			r = t;
+			g = 0.0;
+			b = 1.0;
+		}
+	default:
+		{
+			r = 1.0;
+			g = 0.0;
+			b = q;
+		}
+	}
+
+	return (RoundToFloor(255.0 * r) << 16)
+		| (RoundToFloor(255.0 * g) << 8)
+		| RoundToFloor(255.0 * b);
 }
