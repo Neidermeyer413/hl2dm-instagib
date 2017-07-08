@@ -307,7 +307,7 @@ public void FireBulletsPost(player, shots,  String:weaponname[])
 			MakeVectorFromPoints(endPos, eyePos, shotDir);
 			new Float:dist = GetVectorLength(shotDir, false);
 			if (dist < maxRadius){
-				new Float:scale = (maxRadius - dist)*GetConVarInt(MagJumpMult);
+				new Float:scale = (maxRadius - dist) * GetConVarFloat(MagJumpMult);
 				NormalizeVector(shotDir,shotDir);
 				ScaleVector(shotDir, scale);
 				//Increasing horizontal components
