@@ -5,11 +5,11 @@
 
 public Plugin myinfo =
 {
-	name = "Instagib test",
-	author = "Neidermeyer",
+	name = "Instagib",
+	author = "Neidermeyer, Hahiserw",
 	description = "Quake3-style instagib mode with magjumps and coloured trails",
-	version = "1.0",
-	url = "https://forums.alliedmods.net/showthread.php?t=299113"
+	version = "1.1",
+	url = "http://sfc.my1.ru/forum/38-384-1"
 };
 
 enum {
@@ -46,7 +46,7 @@ public void OnPluginStart()
 	iGib = CreateConVar("instagib", "0", "Instagib mode on/off");
 	iTrace = CreateConVar("instagib_tracers", "1", "Instagib tracers off / player defined / scoreboard based");
 	MagJump = CreateConVar("instagib_magjump", "1", "Instagib magnum jumps on/off");
-	MagJumpMult = CreateConVar("instagib_magjump_mult", "2.9999999", "Instagib magnum jump force multiplier");
+	MagJumpMult = CreateConVar("instagib_magjump_mult", "2.9", "Instagib magnum jump force multiplier");
 	RegAdminCmd("instagib", instagibCmd, ADMFLAG_CHANGEMAP, "Instagib mode on/off");
 	RegConsoleCmd("tracers", tracersColor);
 	RegConsoleCmd("ent_remove_all", dontRunOnClient);
@@ -251,15 +251,7 @@ public void FireBulletsPost(player, shots,  String:weaponname[])
 			TR_GetEndPosition(endPos, INVALID_HANDLE);
 		}
 		TR_GetPlaneNormal(INVALID_HANDLE, splashNorm);
-		if (GetConVarInt(iTrace) != TRACERS_OFF) {
-				decl String:clcolor[3][4];				
-				GetClientCookie(player, clTraceR, clcolor[0], 4);
-				GetClientCookie(player, clTraceG, clcolor[1], 4);
-				GetClientCookie(player, clTraceB, clcolor[2], 4);
-				color[0] = StringToInt(clcolor[0]);
-				color[1] = StringToInt(clcolor[1]);
-				color[2] = StringToInt(clcolor[2]);	
-		}
+
 		if (GetConVarInt(iTrace) == TRACERS_CUSTOM){	
 			//Client settings for tracers
 			if (AreClientCookiesCached(player)){	
