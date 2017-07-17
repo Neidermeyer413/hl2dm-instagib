@@ -412,7 +412,7 @@ public Action startInstagib(Handle timer)
 // that's right, update every player's tracers colors, not just one
 void UpdateTracersColorsByScores()
 {
-	new frags_min = 0;
+	new frags_min = 0x7fffffff;
 	new frags_max = 0;
 
 	// get min, max
@@ -435,7 +435,7 @@ void UpdateTracersColorsByScores()
 
 	new frags_range = frags_max - frags_min;
 
-	if (!frags_range)
+	if (frags_range <= 0)
 	{
 		// to set default colors
 		frags_range = 1;
