@@ -418,7 +418,8 @@ void UpdateTracersColorsByScores()
 			{
 				frags_min = player_score;
 			}
-			else if (player_score > frags_max)
+
+			if (player_score > frags_max)
 			{
 				frags_max = player_score;
 			}
